@@ -1,0 +1,82 @@
+# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: Release gyvaitv-desktop binaries
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          repository: "anba8005/gyvaitv-desktop"
+          token: ${{ secrets.GYVAITV_DESKTOP_ACCESS_TOKEN }}
+      - name: Checkout submodules
+        shell: bash
+        run: |
+          git config --file .gitmodules --get-regexp url | while read url; do
+            git config --file=.gitmodules $(echo "$url" | sed -E "s/git@github.com:|https:\/\/github.com\//https:\/\/${{ secrets.GYVAITV_DESKTOP_ACCESS_TOKEN }}:${{ secrets.GYVAITV_DESKTOP_ACCESS_TOKEN }}@github.com\//")
+          done
+          git submodule sync
+          git submodule update --init --recursive
+      - name: Install node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: "12"
+      - name: Install build tools
+        run: npm install -g yarn pkg modclean
+      - name: Download native binaries
+        run: yarn download-native
+      - name: Build & Package
+        run: yarn pkg-production
+      - name: Compress artifacts
+        run: |
+          zip --junk-paths gyvaitv-desktop-linux bin/gyvaitv-desktop-linux
+          zip --junk-paths gyvaitv-desktop-mac bin/gyvaitv-desktop-mac
+          zip --junk-paths gyvaitv-desktop-win bin/gyvaitv-desktop-win.exe
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            Changes in this Release
+            - First Change
+            - Second Change
+          draft: false
+          prerelease: false
+      - name: Upload Linux Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./gyvaitv-desktop-linux.zip
+          asset_name: gyvaitv-desktop-linux.zip
+          asset_content_type: application/zip
+      - name: Upload Mac Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./gyvaitv-desktop-mac.zip
+          asset_name: gyvaitv-desktop-mac.zip
+          asset_content_type: application/zip
+      - name: Upload Win Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./gyvaitv-desktop-win.zip
+          asset_name: gyvaitv-desktop-win.zip
+          asset_content_type: application/zip
