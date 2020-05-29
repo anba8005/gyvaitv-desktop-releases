@@ -4,8 +4,8 @@
 name: Release gyvaitv-desktop binaries
 
 on:
-  push:
-    branches: [master]
+  repository_dispatch:
+    types: [release-event]
 
 jobs:
   build:
@@ -16,6 +16,7 @@ jobs:
         with:
           repository: anba8005/gyvaitv-desktop
           token: ${{ secrets.GYVAITV_DESKTOP_ACCESS_TOKEN }}
+          ref: ${{ github.event.client_payload.ref }}
       - name: Checkout submodules
         shell: bash
         run: |
@@ -45,12 +46,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body: |
-            Changes in this Release
-            - First Change
-            - Second Change
+          tag_name: ${{ github.event.client_payload.ref }}
+          release_name: Release ${{ github.event.client_payload.ref }}
+          # body: |
+          #   Changes in this Release
+          #   - First Change
+          #   - Second Change
           draft: false
           prerelease: false
       - name: Upload Linux Release Asset
