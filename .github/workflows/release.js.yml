@@ -14,7 +14,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v2
         with:
-          repository: "anba8005/gyvaitv-desktop"
+          repository: anba8005/gyvaitv-desktop
           token: ${{ secrets.GYVAITV_DESKTOP_ACCESS_TOKEN }}
       - name: Checkout submodules
         shell: bash
